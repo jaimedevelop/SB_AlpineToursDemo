@@ -1,10 +1,11 @@
+// pages/Explore.tsx
 import React from 'react';
-import SkiMap from './Explore/SkiMap'; // Updated import path
+import SkiMap from '../components/explore/SkiMap';
 
 const Explore: React.FC = () => {
   return (
     <div className="h-full">
-      {/* Full-screen map with integrated FilterBar and panels */}
+      {/* Full-screen map - no header, accounts for bottom navigation */}
       <SkiMap />
     </div>
   );

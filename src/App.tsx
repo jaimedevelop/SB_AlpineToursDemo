@@ -10,7 +10,6 @@ import Account from './pages/Account';
 
 function App() {
   return (
-    <ResortProvider>
     <BrowserRouter>
       <div className="h-screen flex flex-col bg-gray-50">
         <div className="flex-1 overflow-hidden pb-16">
@@ -35,7 +34,6 @@ function App() {
         <Navigation />
       </div>
     </BrowserRouter>
-  </ResortProvider>
   );
 }
 

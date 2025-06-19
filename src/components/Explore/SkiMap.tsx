@@ -1,34 +1,265 @@
-// Key changes to your existing SkiMap.tsx:
+// components/explore/SkiMap.tsx
+import { useEffect, useState, useMemo, useRef } from 'react';
+import Map from 'react-map-gl';
+import { database } from '../../firebase/database';
+import { ref, onValue } from 'firebase/database';
+import { Resort } from '../../types/types';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import * as turf from '@turf/turf';
 
-import { useResortContext } from '../../contexts/ResortContext';
+// Component imports
+import FilterBar from './FilterBar';
+import MapLayers from './MapLayers';
+import MapMarkers from './MapMarkers';
+import ResortPopup from './ResortPopup';
+import useQuizState from '../../hooks/useQuizState';
 
-export default function SkiMap() {
-  // Replace your local state with context
-  const { 
-    selectedResort, 
-    setSelectedResort, 
-    setFilteredResorts 
-  } = useResortContext();
+// Filter components (keep these imports for FilterPanel)
+import PriceFilter from '../filters/PriceFilter';
+import DifficultyFilter from '../filters/DifficultyFilter';
+import RegionFilter from '../filters/RegionFilter';
+import DistanceFilter from '../filters/DistanceFilter';
+import AmenitiesFilter from '../filters/AmenitiesFilter';
+import CityFilter from '../filters/CityFilter';
 
-  // Remove these local state declarations:
-  // const [selectedResort, setSelectedResort] = useState<Resort | null>(null);
+const MAPBOX_TOKEN = 'pk.eyJ1Ijoiam9hcXVpbmdmMjEiLCJhIjoiY2x1dnZ1ZGFrMDduZTJrbWp6bHExbzNsYiJ9.ZOEuIV9R0ks2I5bYq40HZQ';
 
-  // Update your filteredResorts effect to use context:
+type FilterType = 'price' | 'difficulty' | 'region' | 'distance' | 'amenities' | 'city' | null;
+
+interface SkiMapProps {
+  onResortSelect?: (resort: Resort) => void;
+  onFilteredResortsChange?: (resorts: Resort[]) => void;
+}
+
+export default function SkiMap({
+  onResortSelect,
+  onFilteredResortsChange
+}: SkiMapProps = {}) {
+  // State management
+  const [resorts, setResorts] = useState<Resort[]>([]);
+  const [selectedResort, setSelectedResort] = useState<Resort | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterType>(null);
+  const [hoveredRegion, setHoveredRegion] = useState<string>('');
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const [selectedLocationCoords, setSelectedLocationCoords] = useState<[number, number] | null>(null);
+  
+  // Filter states
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 400]);
+  const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
+  const [selectedStates, setSelectedStates] = useState<string[]>([]);
+  const [location, setLocation] = useState<string>('');
+  const [maxDistance, setMaxDistance] = useState<number>(100);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [selectedCitySize, setSelectedCitySize] = useState<string>('');
+
+  // Apply quiz state to filters (cleaner approach)
+  useQuizState({
+    setPriceRange,
+    setSelectedDifficulties,
+    setActiveFilter,
+    setLocation,
+    setSelectedRegion
+  });
+
+  // Helper function to determine if a filter is active
+  const isFilterActive = (filterType: FilterType): boolean => {
+    switch (filterType) {
+      case 'price':
+        return priceRange[0] > 0 || priceRange[1] < 400;
+      case 'difficulty':
+        return selectedDifficulties.length > 0;
+      case 'region':
+        return selectedRegion !== '';
+      case 'distance':
+        return location !== '' && selectedLocationCoords !== null;
+      case 'amenities':
+        return selectedAmenities.length > 0;
+      case 'city':
+        return selectedCitySize !== '';
+      default:
+        return false;
+    }
+  };
+
+  // Fetch resorts from Firebase
   useEffect(() => {
-    setFilteredResorts(filteredResorts);
-    console.log("Passing filtered resorts to context:", filteredResorts.length);
-  }, [filteredResorts, setFilteredResorts]);
+    const resortsRef = ref(database, 'resorts');
+    onValue(resortsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setResorts(Object.values(data));
+      }
+    });
+  }, []);
 
-  // Update the return JSX to use proper height:
+  // Filter resorts based on all active filters
+  const filteredResorts = useMemo(() => {
+    return resorts.filter(resort => {
+      // Distance Filter
+      if (selectedLocationCoords && location) {
+        try {
+          const resortLong = Number(resort.longitude);
+          const resortLat = Number(resort.latitude);
+          
+          if (isNaN(resortLong) || isNaN(resortLat)) {
+            return false;
+          }
+
+          const from = turf.point([selectedLocationCoords[0], selectedLocationCoords[1]]);
+          const to = turf.point([resortLong, resortLat]);
+          
+          const distance = turf.distance(from, to, { units: 'miles' });
+          
+          if (distance > maxDistance) {
+            return false;
+          }
+        } catch (error) {
+          console.error('Error calculating distance for resort:', resort.name, error);
+          return false;
+        }
+      }
+
+      // Region Filter
+      if (selectedRegion && resort.region !== selectedRegion) {
+        return false;
+      }
+
+      // Price Filter
+      const fullDayPrice = parseFloat(resort.fullDayTicket.replace(/[^0-9.]/g, ''));
+      if (isNaN(fullDayPrice) || fullDayPrice < priceRange[0] || fullDayPrice > priceRange[1]) {
+        return false;
+      }
+
+      // Difficulty Filter
+      if (selectedDifficulties.length > 0) {
+        const difficultyMap: { [key: string]: string } = {
+          'Green': resort.difficulty.percent.green,
+          'Blue': resort.difficulty.percent.blue,
+          'Double Blue': resort.difficulty.percent.doubleBlue,
+          'Black': resort.difficulty.percent.black,
+          'Double Black': resort.difficulty.percent.doubleBlack
+        };
+        
+        const hasSelectedDifficulty = selectedDifficulties.some(difficulty => {
+          const percentage = parseFloat(difficultyMap[difficulty].replace('%', ''));
+          return !isNaN(percentage) && percentage >= 30;
+        });
+        
+        if (!hasSelectedDifficulty) {
+          return false;
+        }
+      }
+
+      // Amenities Filter
+      if (selectedAmenities.length > 0) {
+        const amenityMap: { [key: string]: boolean | null } = {
+          'Night Skiing': resort.nightSkiing,
+          'Terrain Park': resort.terrainPark === 'Yes',
+          'Backcountry Access': resort.backcountry,
+          'Snow Tubing': resort.snowTubing,
+          'Ice Skating': resort.iceSkating
+        };
+
+        const hasAllSelectedAmenities = selectedAmenities.every(
+          amenity => amenityMap[amenity]
+        );
+
+        if (!hasAllSelectedAmenities) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [resorts, priceRange, selectedDifficulties, selectedRegion, selectedAmenities, selectedLocationCoords, location, maxDistance]);
+
+  // Pass filtered resorts to parent component
+  useEffect(() => {
+    if (onFilteredResortsChange) {
+      onFilteredResortsChange(filteredResorts);
+    }
+  }, [filteredResorts, onFilteredResortsChange]);
+
+  // Handle resort selection
+  const handleResortSelect = (resort: Resort) => {
+    setSelectedResort(resort);
+    if (onResortSelect) {
+      onResortSelect(resort);
+    }
+  };
+
+  // Handle map click (close filters and popups)
+  const handleMapClick = (event: mapboxgl.MapLayerMouseEvent) => {
+    // Don't close if clicking on a marker
+    if (event.originalEvent.target instanceof HTMLElement && 
+        event.originalEvent.target.closest('.mapboxgl-marker')) {
+      return;
+    }
+    
+    setActiveFilter(null);
+    setHoveredRegion('');
+  };
+
+  // Handle map load
+  const handleMapLoad = (event: { target: mapboxgl.Map }) => {
+    mapRef.current = event.target;
+  };
+
+  // Render filter panel based on active filter
+  const renderFilterPanel = () => {
+    switch (activeFilter) {
+      case 'price':
+        return <PriceFilter priceRange={priceRange} setPriceRange={setPriceRange} />;
+      case 'difficulty':
+        return <DifficultyFilter selectedDifficulties={selectedDifficulties} setSelectedDifficulties={setSelectedDifficulties} />;
+      case 'region':
+        return (
+          <RegionFilter 
+            selectedRegion={selectedRegion}
+            setSelectedRegion={setSelectedRegion}
+            selectedStates={selectedStates}
+            setSelectedStates={setSelectedStates}
+            onRegionHover={setHoveredRegion}
+          />
+        );
+      case 'distance':
+        return (
+          <DistanceFilter
+            location={location}
+            setLocation={setLocation}
+            maxDistance={maxDistance}
+            setMaxDistance={setMaxDistance}
+            setSelectedCoordinates={setSelectedLocationCoords}
+          />
+        );
+      case 'amenities':
+        return <AmenitiesFilter selectedAmenities={selectedAmenities} setSelectedAmenities={setSelectedAmenities} />;
+      case 'city':
+        return <CityFilter selectedCitySize={selectedCitySize} setSelectedCitySize={setSelectedCitySize} />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="relative w-full h-full"> {/* Changed from h-screen */}
-      {/* FilterBar Component */}
+    <div className="relative w-full h-full pb-16"> {/* pb-16 accounts for bottom navigation */}
+      {/* Filter Bar */}
       <FilterBar 
         activeFilter={activeFilter}
         setActiveFilter={setActiveFilter}
         isFilterActive={isFilterActive}
       />
+
+      {/* Filter Panel - TODO: Move to FilterPanel component */}
+      {activeFilter && (
+        <div className="absolute top-20 left-4 right-4 z-20 bg-white rounded-lg shadow-lg p-4">
+          {renderFilterPanel()}
+        </div>
+      )}
       
+      {/* Map */}
       <Map
         initialViewState={{
           longitude: -100,
@@ -42,34 +273,32 @@ export default function SkiMap() {
         onClick={handleMapClick}
         onLoad={handleMapLoad}
       >
-        {/* Resort markers */}
-        {filteredResorts.map((resort, index) => (
-          resort.latitude && resort.longitude ? (
-            <Marker
-              key={index}
-              latitude={Number(resort.latitude)}
-              longitude={Number(resort.longitude)}
-              onClick={e => {
-                e.originalEvent.stopPropagation();
-                setSelectedResort(resort); // This now updates context
-              }}
-            >
-              <MapPin 
-                className={`cursor-pointer transition-colors ${
-                  selectedResort?.name === resort.name 
-                    ? 'text-red-600' 
-                    : 'text-blue-600 hover:text-blue-800'
-                }`} 
-              />
-            </Marker>
-          ) : null
-        ))}
+        {/* Map Layers */}
+        <MapLayers
+          mapRef={mapRef}
+          selectedLocationCoords={selectedLocationCoords}
+          maxDistance={maxDistance}
+          selectedRegion={selectedRegion}
+          hoveredRegion={hoveredRegion}
+          activeFilter={activeFilter}
+          onMapLoad={handleMapLoad}
+        />
 
-        {/* Rest of your markers and popup... */}
+        {/* Map Markers */}
+        <MapMarkers
+          filteredResorts={filteredResorts}
+          selectedLocationCoords={selectedLocationCoords}
+          onResortSelect={handleResortSelect}
+        />
+
+        {/* Resort Popup */}
+        {selectedResort && (
+          <ResortPopup 
+            resort={selectedResort}
+            onClose={() => setSelectedResort(null)}
+          />
+        )}
       </Map>
-      
-      {/* Add SlidingPanel here when ready */}
-      {/* <SlidingPanel resorts={filteredResorts} /> */}
     </div>
   );
 }
