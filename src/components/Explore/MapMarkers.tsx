@@ -1,17 +1,19 @@
 import { Marker } from 'react-map-gl';
-import { MapPin } from 'lucide-react';
+import { MapPin, Heart } from 'lucide-react';
 import { Resort } from '../../types/types';
 
 interface MapMarkersProps {
   filteredResorts: Resort[];
   selectedLocationCoords: [number, number] | null;
   onResortSelect: (resort: Resort) => void;
+  favoriteResorts: Set<string>;
 }
 
 export default function MapMarkers({
   filteredResorts,
   selectedLocationCoords,
-  onResortSelect
+  onResortSelect,
+  favoriteResorts
 }: MapMarkersProps) {
   
   return (
@@ -28,11 +30,24 @@ export default function MapMarkers({
               onResortSelect(resort);
             }}
           >
-            <MapPin className="text-blue-600 hover:text-blue-800 cursor-pointer" />
+            <div className="relative cursor-pointer">
+              {/* Main marker icon */}
+              <MapPin className="text-blue-600 hover:text-blue-800 transition-colors" size={24} />
+              
+              {/* Favorite heart overlay - visual indicator only */}
+              {favoriteResorts.has(resort.name) && (
+                <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                  <Heart 
+                    className="text-red-500 fill-red-500" 
+                    size={12}
+                  />
+                </div>
+              )}
+            </div>
           </Marker>
         ) : null
       ))}
-
+      
       {/* Selected location marker */}
       {selectedLocationCoords && (
         <Marker

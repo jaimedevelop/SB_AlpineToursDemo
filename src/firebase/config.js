@@ -1,7 +1,8 @@
 // src/firebase/config.js
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getDatabase } from 'firebase/database';
+import { getFirestore } from 'firebase/firestore'; // Add Firestore
+import { getDatabase } from 'firebase/database'; // Keep for now during transition
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,7 +20,10 @@ const app = initializeApp(firebaseConfig);
 // Get Auth instance
 export const auth = getAuth(app);
 
-// Get Realtime Database instance
+// Get Firestore instance (NEW)
+export const db = getFirestore(app);
+
+// Get Realtime Database instance (Keep for backward compatibility)
 export const database = getDatabase(app);
 
 export default app;

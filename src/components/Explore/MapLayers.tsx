@@ -73,69 +73,72 @@ export default function MapLayers({
   onMapLoad
 }: MapLayersProps) {
   
+  // Track if we've already loaded the map layers
+  const hasLoadedLayers = useRef(false);
+
   const updateDistanceCircle = () => {
-  if (!mapRef.current) return;
-  const map = mapRef.current;
+    if (!mapRef.current) return;
+    const map = mapRef.current;
 
-  // Remove existing layers and sources
-  if (map.getLayer('distance-fill')) map.removeLayer('distance-fill');
-  if (map.getLayer('distance-border')) map.removeLayer('distance-border');
-  if (map.getSource('distance-source')) map.removeSource('distance-source');
+    // Remove existing layers and sources
+    if (map.getLayer('distance-fill')) map.removeLayer('distance-fill');
+    if (map.getLayer('distance-border')) map.removeLayer('distance-border');
+    if (map.getSource('distance-source')) map.removeSource('distance-source');
 
-  // If no coordinates are selected, just return after cleanup
-  if (!selectedLocationCoords) return;
+    // If no coordinates are selected, just return after cleanup
+    if (!selectedLocationCoords) return;
 
-  // Create a circle using turf.js
-  const center = selectedLocationCoords;
-  const radius = maxDistance * 1.609; // Convert miles to kilometers
-  const options = {
-    steps: 64,
-    units: 'kilometers' as const
+    // Create a circle using turf.js
+    const center = selectedLocationCoords;
+    const radius = maxDistance * 1.609; // Convert miles to kilometers
+    const options = {
+      steps: 64,
+      units: 'kilometers' as const
+    };
+    const circle = turf.circle(center, radius, options);
+
+    // Add the circle source
+    map.addSource('distance-source', {
+      type: 'geojson',
+      data: circle
+    });
+
+    // Add the filled circle layer
+    map.addLayer({
+      id: 'distance-fill',
+      type: 'fill',
+      source: 'distance-source',
+      paint: {
+        'fill-color': '#4264fb',
+        'fill-opacity': 0.2
+      }
+    }, 'region-states-outline');
+
+    // Add the circle border layer
+    map.addLayer({
+      id: 'distance-border',
+      type: 'line',
+      source: 'distance-source',
+      paint: {
+        'line-color': '#4264fb',
+        'line-width': 2,
+        'line-opacity': 0.8
+      }
+    });
   };
-  const circle = turf.circle(center, radius, options);
-
-  // Add the circle source
-  map.addSource('distance-source', {
-    type: 'geojson',
-    data: circle
-  });
-
-  // Add the filled circle layer
-  map.addLayer({
-    id: 'distance-fill',
-    type: 'fill',
-    source: 'distance-source',
-    paint: {
-      'fill-color': '#4264fb',
-      'fill-opacity': 0.2
-    }
-  }, 'region-states-outline');
-
-  // Add the circle border layer
-  map.addLayer({
-    id: 'distance-border',
-    type: 'line',
-    source: 'distance-source',
-    paint: {
-      'line-color': '#4264fb',
-      'line-width': 2,
-      'line-opacity': 0.8
-    }
-  });
-};
-
-  // Call the parent's onMapLoad and then handle our layer setup
-  useEffect(() => {
-    if (mapRef.current) {
-      handleMapLoad({ target: mapRef.current });
-    }
-  }, [mapRef.current]);
 
   const handleMapLoad = async (event: { target: mapboxgl.Map }) => {
     const map = event.target;
+    
+    // Prevent multiple loads
+    if (hasLoadedLayers.current) {
+      return;
+    }
+    
     onMapLoad(event); // Call parent's handler first
 
     try {
+      // Check if source already exists before adding
       if (!map.getSource('states')) {
         const response = await fetch(statesData);
         const geoJsonData = await response.json();
@@ -206,11 +209,17 @@ export default function MapLayers({
             ]
           }
         });
+
+        // Mark as loaded
+        hasLoadedLayers.current = true;
       }
     } catch (error) {
       console.error('Error loading GeoJSON:', error);
     }
   };
+
+  // Remove the problematic useEffect that was calling handleMapLoad
+  // The parent component should call handleMapLoad when the map is actually loaded
 
   // Update distance circle effect
   useEffect(() => {
@@ -268,6 +277,9 @@ export default function MapLayers({
         if (map.getLayer('region-states-fill')) map.removeLayer('region-states-fill');
         if (map.getLayer('us-mask')) map.removeLayer('us-mask');
         if (map.getSource('states')) map.removeSource('states');
+        
+        // Reset the loaded flag
+        hasLoadedLayers.current = false;
       }
     };
   }, []);

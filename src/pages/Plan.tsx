@@ -32,7 +32,7 @@ import {
   Route,
   Briefcase
 } from 'lucide-react';
-import PlanHeader, { PlanningMode } from '../components/Plan/PlanHeader';
+import PlanHeader, { PlanningMode } from '../components/plan/PlanHeader';
 
 const Plan: React.FC = () => {
   const navigate = useNavigate();

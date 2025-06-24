@@ -1,11 +1,12 @@
 // components/explore/SkiMap.tsx
 import { useEffect, useState, useMemo, useRef } from 'react';
-import Map from 'react-map-gl';
+import Map, { Marker } from 'react-map-gl';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { db } from '../../firebase/database';
 import { database } from '../../firebase/database';
 import { ref, onValue } from 'firebase/database';
 import { Resort } from '../../types/types';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import * as turf from '@turf/turf';
 
 // Component imports
@@ -16,16 +17,21 @@ import ResortPopup from './ResortPopup';
 import useQuizState from '../../hooks/useQuizState';
 
 // Filter components (keep these imports for FilterPanel)
-import PriceFilter from '../filters/PriceFilter';
-import DifficultyFilter from '../filters/DifficultyFilter';
-import RegionFilter from '../filters/RegionFilter';
-import DistanceFilter from '../filters/DistanceFilter';
-import AmenitiesFilter from '../filters/AmenitiesFilter';
-import CityFilter from '../filters/CityFilter';
+import PriceFilter from './filters/PriceFilter';
+import DifficultyFilter from './filters/DifficultyFilter';
+import RegionFilter from './filters/RegionFilter';
+import DistanceFilter from './filters/DistanceFilter';
+import AmenitiesFilter from './filters/AmenitiesFilter';
+import CityFilter from './filters/CityFilter';
+
+// Favorites imports
+import { useFavorites } from '../../hooks/useFavorites';
+import { applyFavoritesFilter, isFavoritesFilterActive } from '../../utils/favoritesFilter';
+import { createFilterResetFunctions } from '../../utils/filterResets';
 
 const MAPBOX_TOKEN = 'pk.eyJ1Ijoiam9hcXVpbmdmMjEiLCJhIjoiY2x1dnZ1ZGFrMDduZTJrbWp6bHExbzNsYiJ9.ZOEuIV9R0ks2I5bYq40HZQ';
 
-type FilterType = 'price' | 'difficulty' | 'region' | 'distance' | 'amenities' | 'city' | null;
+type FilterType = 'price' | 'difficulty' | 'region' | 'distance' | 'amenities' | 'city' | 'favorites' | null;
 
 interface SkiMapProps {
   onResortSelect?: (resort: Resort) => void;
@@ -54,6 +60,37 @@ export default function SkiMap({
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [selectedCitySize, setSelectedCitySize] = useState<string>('');
 
+  // Use favorites hook
+  const {
+    favoriteResorts,
+    favoritesActive,
+    setFavoritesActive,
+    toggleFavorite,
+    resetFavoritesFilter,
+    isFavorite,
+    isLoading: favoritesLoading,
+    error: favoritesError
+  } = useFavorites();
+
+  console.log('SkiMap received favorites:', {
+    favoriteResorts: Array.from(favoriteResorts),
+    favoritesActive,
+    favoritesCount: favoriteResorts.size
+  });
+
+  // Create reset functions including favorites
+  const filterResets = createFilterResetFunctions({
+    setPriceRange,
+    setSelectedDifficulties,
+    setSelectedRegion,
+    setSelectedStates,
+    setLocation,
+    setMaxDistance,
+    setSelectedCoordinates: setSelectedLocationCoords,
+    setSelectedAmenities,
+    setSelectedCitySize,
+  });
+
   // Apply quiz state to filters (cleaner approach)
   useQuizState({
     setPriceRange,
@@ -78,6 +115,8 @@ export default function SkiMap({
         return selectedAmenities.length > 0;
       case 'city':
         return selectedCitySize !== '';
+      case 'favorites':
+        return isFavoritesFilterActive(favoritesActive);
       default:
         return false;
     }
@@ -94,9 +133,9 @@ export default function SkiMap({
     });
   }, []);
 
-  // Filter resorts based on all active filters
+  // Filter resorts based on all active filters including favorites
   const filteredResorts = useMemo(() => {
-    return resorts.filter(resort => {
+    let filtered = resorts.filter(resort => {
       // Distance Filter
       if (selectedLocationCoords && location) {
         try {
@@ -143,7 +182,8 @@ export default function SkiMap({
         };
         
         const hasSelectedDifficulty = selectedDifficulties.some(difficulty => {
-          const percentage = parseFloat(difficultyMap[difficulty].replace('%', ''));
+          const difficultyValue = difficultyMap[difficulty];
+          const percentage = difficultyValue ? parseFloat(String(difficultyValue).toString().replace('%', '')) : 0;
           return !isNaN(percentage) && percentage >= 30;
         });
         
@@ -173,7 +213,16 @@ export default function SkiMap({
 
       return true;
     });
-  }, [resorts, priceRange, selectedDifficulties, selectedRegion, selectedAmenities, selectedLocationCoords, location, maxDistance]);
+
+    // Apply favorites filter using modular utility
+    filtered = applyFavoritesFilter({
+      resorts: filtered,
+      favoritesActive,
+      favoriteResorts
+    });
+
+    return filtered;
+  }, [resorts, priceRange, selectedDifficulties, selectedRegion, selectedAmenities, selectedLocationCoords, location, maxDistance, favoritesActive, favoriteResorts]);
 
   // Pass filtered resorts to parent component
   useEffect(() => {
@@ -244,12 +293,16 @@ export default function SkiMap({
   };
 
   return (
-    <div className="relative w-full h-full pb-16"> {/* pb-16 accounts for bottom navigation */}
+    <div className="relative w-full h-full pb-2"> {/* pb-16 accounts for bottom navigation */}
       {/* Filter Bar */}
       <FilterBar 
         activeFilter={activeFilter}
         setActiveFilter={setActiveFilter}
         isFilterActive={isFilterActive}
+        favoritesActive={favoritesActive}
+        setFavoritesActive={setFavoritesActive}
+        resetFavoritesFilter={resetFavoritesFilter}
+        {...filterResets}
       />
 
       {/* Filter Panel - TODO: Move to FilterPanel component */}
@@ -289,6 +342,8 @@ export default function SkiMap({
           filteredResorts={filteredResorts}
           selectedLocationCoords={selectedLocationCoords}
           onResortSelect={handleResortSelect}
+          favoriteResorts={favoriteResorts}
+          onToggleFavorite={toggleFavorite}
         />
 
         {/* Resort Popup */}
@@ -296,6 +351,8 @@ export default function SkiMap({
           <ResortPopup 
             resort={selectedResort}
             onClose={() => setSelectedResort(null)}
+            isFavorite={isFavorite(selectedResort.name)}
+            onToggleFavorite={() => toggleFavorite(selectedResort.name)}
           />
         )}
       </Map>
