@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MapPin, Calendar, Home, Car, Check } from 'lucide-react';
 import StepProgress from './Components/StepProgress';
 import PricingSummary from './Components/PricingSummary';
@@ -10,8 +10,10 @@ import DateSelection from './Steps/DateSelection';
 import AccommodationSelection from './Steps/AccommodationSelection';
 import TransportationPlaceholder from './Steps/TransportationPlaceholder';
 import TripReview from './Steps/TripReview';
+import { mockDemoResorts } from '../../../data/mockDemoResorts';
+import type { Resort } from '../../../types/types';
 
-// Mock Data
+// Mock Data (keeping your existing mock data as fallback)
 const mockResorts = [
   {
     id: 'whistler',
@@ -78,15 +80,42 @@ const mockAccommodations = [
 const QuickTripBuilder: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   
-  // Get initial resort from URL params
+  // Check for pre-selected resort from navigation state or URL params
   const getInitialResort = () => {
+    // First check navigation state (from QuickView)
+    if (location.state?.selectedResort) {
+      return location.state.selectedResort;
+    }
+    
+    // Fallback to URL params (existing functionality)
     const resortId = searchParams.get('resort');
     if (resortId) {
+      // Try to find in demo resorts first
+      const demoResort = mockDemoResorts.find(r => r.id === resortId);
+      if (demoResort) {
+        return demoResort;
+      }
+      // Fallback to mock resorts
       return mockResorts.find(r => r.id === resortId) || null;
     }
+    
     return null;
+  };
+
+  // Check if we should skip resort selection (when resort is pre-selected)
+  const getInitialStep = () => {
+    const initialResort = getInitialResort();
+    const context = location.state?.context;
+    
+    // If resort came from resort selection (QuickView), skip to dates
+    if (initialResort && context === 'resort-selection') {
+      return 1; // Skip to date selection
+    }
+    
+    return 0; // Start with resort selection
   };
 
   const [tripData, setTripData] = useState({
@@ -95,6 +124,12 @@ const QuickTripBuilder: React.FC = () => {
     accommodation: null,
     transportation: null
   });
+
+  // Set initial step based on pre-selection
+  useEffect(() => {
+    const initialStep = getInitialStep();
+    setCurrentStep(initialStep);
+  }, []);
 
   const steps = [
     { title: 'Resort', icon: MapPin },
@@ -145,6 +180,7 @@ const QuickTripBuilder: React.FC = () => {
           <DateSelection
             selectedDates={tripData.dates}
             onSelect={(dates) => setTripData({...tripData, dates})}
+            selectedResort={tripData.resort} // Pass resort for context
           />
         );
       case 2:
@@ -153,6 +189,7 @@ const QuickTripBuilder: React.FC = () => {
             selectedAccommodation={tripData.accommodation}
             onSelect={(accommodation) => setTripData({...tripData, accommodation})}
             accommodations={mockAccommodations}
+            selectedResort={tripData.resort} // Pass resort for context
           />
         );
       case 3:
@@ -160,6 +197,7 @@ const QuickTripBuilder: React.FC = () => {
           <TransportationPlaceholder
             selectedTransport={tripData.transportation}
             onSelect={(transportation) => setTripData({...tripData, transportation})}
+            selectedResort={tripData.resort} // Pass resort for context
           />
         );
       case 4:
@@ -172,6 +210,41 @@ const QuickTripBuilder: React.FC = () => {
       default:
         return null;
     }
+  };
+
+  // Render resort confirmation when resort is pre-selected
+  const renderResortConfirmation = () => {
+    if (!tripData.resort || currentStep === 0) return null;
+
+    return (
+      <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-lg overflow-hidden">
+              <img 
+                src={tripData.resort.imageUrl || tripData.resort.images?.[0] || '/placeholder-resort.jpg'} 
+                alt={tripData.resort.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-green-800">Resort Selected</span>
+              </div>
+              <h3 className="font-semibold text-gray-900">{tripData.resort.name}</h3>
+              <p className="text-sm text-gray-600">{tripData.resort.state || tripData.resort.location}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setCurrentStep(0)}
+            className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            Change Resort
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -190,6 +263,9 @@ const QuickTripBuilder: React.FC = () => {
             <h2 className="text-xl font-bold">Plan Your Trip</h2>
             <div className="w-20"></div> {/* Spacer for centering */}
           </div>
+          
+          {/* Resort Confirmation */}
+          {renderResortConfirmation()}
           
           {/* Step Progress */}
           <StepProgress currentStep={currentStep} steps={steps} />

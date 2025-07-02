@@ -1,5 +1,8 @@
+//DEMO IMPORT
+import { mockDemoResorts } from '../../data/mockDemoResorts';
 // components/explore/SkiMap.tsx
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom'; // Add this import
 import Map, { Marker } from 'react-map-gl';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -14,6 +17,8 @@ import FilterBar from './FilterBar';
 import MapLayers from './MapLayers';
 import MapMarkers from './MapMarkers';
 import ResortPopup from './ResortPopup';
+import QuickPreview from './QuickPreview'; // Add this import
+import SimpleResortOverlay from './SimpleResortOverlay'; // Add this import
 import useQuizState from '../../hooks/useQuizState';
 
 // Filter components (keep these imports for FilterPanel)
@@ -45,6 +50,45 @@ export default function SkiMap({
   // State management
   const [resorts, setResorts] = useState<Resort[]>([]);
   const [selectedResort, setSelectedResort] = useState<Resort | null>(null);
+  const [showQuickPreview, setShowQuickPreview] = useState(false);
+  const [showFullDetails, setShowFullDetails] = useState(false);
+  
+  // Add navigate hook
+  const navigate = useNavigate();
+
+  // Updated handlers for the new flow
+  const handleMarkerClick = (resort: Resort) => {
+    setSelectedResort(resort);
+    setShowQuickPreview(true);
+    setShowFullDetails(false); // Make sure full details is closed
+  };
+
+  const handleViewDetails = () => {
+    setShowQuickPreview(false);
+    setShowFullDetails(true);
+  };
+
+  // Handler for planning a trip
+  const handlePlanTrip = (resort: Resort) => {
+    // Close any panels
+    setShowQuickPreview(false);
+    setShowFullDetails(false);
+    
+    // Navigate to plan page with resort data
+    navigate('/plan', { 
+      state: { 
+        selectedResort: resort 
+      } 
+    });
+  };
+
+  // Handler for closing all panels
+  const handleCloseAll = () => {
+    setShowQuickPreview(false);
+    setShowFullDetails(false);
+    setSelectedResort(null);
+  };
+  
   const [activeFilter, setActiveFilter] = useState<FilterType>(null);
   const [hoveredRegion, setHoveredRegion] = useState<string>('');
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -122,7 +166,8 @@ export default function SkiMap({
     }
   };
 
-  // Fetch resorts from Firebase
+  /* 
+  //Fetch resorts from Firebase
   useEffect(() => {
     const resortsRef = ref(database, 'resorts');
     onValue(resortsRef, (snapshot) => {
@@ -132,6 +177,25 @@ export default function SkiMap({
       }
     });
   }, []);
+  */
+  //DEMO RESORTS USE EFFECT
+  useEffect(() => {
+  // Demo mode toggle - set to true for investor demo, false for real app
+  const demoMode = true;
+  
+  const resortsRef = ref(database, 'resorts');
+  onValue(resortsRef, (snapshot) => {
+    const data = snapshot.val();
+    const firebaseResorts = data ? Object.values(data) : [];
+    
+    // Add demo resorts first if in demo mode
+    const allResorts = demoMode 
+      ? [...mockDemoResorts, ...firebaseResorts]
+      : firebaseResorts;
+    
+    setResorts(allResorts);
+  });
+}, []);
 
   // Filter resorts based on all active filters including favorites
   const filteredResorts = useMemo(() => {
@@ -231,9 +295,10 @@ export default function SkiMap({
     }
   }, [filteredResorts, onFilteredResortsChange]);
 
-  // Handle resort selection
+  // Handle resort selection (keep for backward compatibility)
   const handleResortSelect = (resort: Resort) => {
-    setSelectedResort(resort);
+    // Use the new flow instead
+    handleMarkerClick(resort);
     if (onResortSelect) {
       onResortSelect(resort);
     }
@@ -249,6 +314,8 @@ export default function SkiMap({
     
     setActiveFilter(null);
     setHoveredRegion('');
+    // Also close the new panels when clicking on map
+    handleCloseAll();
   };
 
   // Handle map load
@@ -337,17 +404,18 @@ export default function SkiMap({
           onMapLoad={handleMapLoad}
         />
 
-        {/* Map Markers */}
+        {/* Map Markers - Update to use new handler */}
         <MapMarkers
           filteredResorts={filteredResorts}
           selectedLocationCoords={selectedLocationCoords}
-          onResortSelect={handleResortSelect}
+          onResortSelect={handleMarkerClick} // Use new handler instead of handleResortSelect
           favoriteResorts={favoriteResorts}
           onToggleFavorite={toggleFavorite}
         />
 
-        {/* Resort Popup */}
-        {selectedResort && (
+        {/* Keep the old ResortPopup for now if you want, but it might conflict with the new flow */}
+        {/* Comment this out to avoid conflicts with new system:
+        {selectedResort && !showQuickPreview && !showFullDetails && (
           <ResortPopup 
             resort={selectedResort}
             onClose={() => setSelectedResort(null)}
@@ -355,7 +423,26 @@ export default function SkiMap({
             onToggleFavorite={() => toggleFavorite(selectedResort.name)}
           />
         )}
+        */}
       </Map>
+
+      {/* New Quick Preview Panel */}
+      {showQuickPreview && selectedResort && (
+        <QuickPreview
+          resort={selectedResort}
+          onClose={handleCloseAll}
+          onViewDetails={handleViewDetails}
+          onPlanTrip={() => handlePlanTrip(selectedResort)}
+        />
+      )}
+
+      {/* New Full Details Overlay */}
+      <SimpleResortOverlay
+        resort={selectedResort}
+        isOpen={showFullDetails}
+        onClose={handleCloseAll}
+        onPlanTrip={handlePlanTrip}
+      />
     </div>
   );
 }

@@ -11,6 +11,8 @@ import Welcome from './components/auth/Welcome';
 import Login from './components/auth/Login';
 import CreateAccount from './components/auth/CreateAccount';
 import { AuthWrapper, useAuth } from './components/auth/AuthWrapper';
+import { SWRConfig } from 'swr';
+import { swrConfig } from './lib/swr';
 
 // Component to handle the main app routing
 function AppContent() {

@@ -1,0 +1,63 @@
+/* Common color variables and patterns */
+:root {
+  --primary-blue: #3b82f6;
+  --primary-blue-light: #dbeafe;
+  --primary-blue-dark: #1d4ed8;
+  --success-green: #10b981;
+  --success-green-light: #d1fae5;
+  --warning-orange: #f59e0b;
+  --danger-red: #ef4444;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-600: #4b5563;
+  --gray-900: #111827;
+}
+
+.card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+}
+
+.cardHeader {
+  @apply flex items-center justify-between mb-4;
+}
+
+.cardTitle {
+  @apply text-lg font-semibold text-gray-900;
+}
+
+.button {
+  @apply px-4 py-2 rounded-lg font-medium transition-colors;
+}
+
+.buttonPrimary {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.buttonSecondary {
+  @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+}
+
+.buttonDanger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+.statCard {
+  @apply text-center p-4 bg-gray-50 rounded-lg;
+}
+
+.statValue {
+  @apply text-2xl font-bold;
+}
+
+.statLabel {
+  @apply text-sm text-gray-600 mt-1;
+}
+
+.progressBar {
+  @apply w-full bg-gray-200 rounded-full h-2;
+}
+
+.progressFill {
+  @apply h-2 rounded-full transition-all duration-300;
+}

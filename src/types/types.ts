@@ -73,3 +73,46 @@ export interface Resort {
     icon?: string;
   };
 }
+// Add these interfaces to your types.ts file
+
+export interface TripPlan {
+  id?: string;
+  userId?: string;
+  resort: Resort | null;
+  dates: {
+    startDate: Date;
+    endDate: Date;
+  } | null;
+  accommodation: Accommodation | null;
+  transportation: Transportation | null;
+  status: 'planning' | 'booked' | 'completed';
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface Accommodation {
+  id: number | string;
+  name: string;
+  distance: string;
+  pricePerNight: number;
+  rating: number;
+  amenities: string[];
+  image: string;
+  type?: 'hotel' | 'lodge' | 'condo' | 'chalet';
+}
+
+export interface Transportation {
+  id: string;
+  type: 'flight' | 'drive' | 'bus' | 'train';
+  provider?: string;
+  price?: number;
+  duration?: string;
+  details?: string;
+}
+
+// Navigation state interface for passing data between pages
+export interface NavigationState {
+  selectedResort?: Resort;
+  context?: 'resort-selection' | 'new-trip' | 'continue-planning';
+  tripId?: string;
+}
