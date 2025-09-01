@@ -1,6 +1,6 @@
 import React from 'react';
 import ToggleSwitch from '../shared/ToggleSwitch';
-import { useSettings } from '../../../context/SettingsContext';
+import { useSettings } from '../../../contexts/SettingsContext';
 import styles from '../../../styles/shared.module.css';
 
 interface Permission {

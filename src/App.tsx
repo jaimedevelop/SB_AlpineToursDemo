@@ -11,6 +11,7 @@ import Welcome from './components/auth/Welcome';
 import Login from './components/auth/Login';
 import CreateAccount from './components/auth/CreateAccount';
 import { AuthWrapper, useAuth } from './components/auth/AuthWrapper';
+import { AuthProvider } from './contexts/AuthContext';
 import { SWRConfig } from 'swr';
 import { swrConfig } from './lib/swr';
 
@@ -34,6 +35,7 @@ function AppContent() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       <div className={`flex-1 overflow-hidden ${shouldHideNavigation ? '' : 'pb-16'}`}>
+        <AuthProvider>
         <Routes>
           {/* Welcome/Landing page - shown to all users initially */}
           <Route path="/welcome" element={<Welcome />} />
@@ -69,6 +71,7 @@ function AppContent() {
             } 
           />
         </Routes>
+        </AuthProvider>
       </div>
       {!shouldHideNavigation && <Navigation />}
     </div>

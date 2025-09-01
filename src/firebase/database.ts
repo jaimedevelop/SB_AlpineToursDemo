@@ -1,5 +1,4 @@
-// src/firebase/database.js
-// Firestore database operations (replacing Realtime Database)
+// src/firebase/database.ts
 import { 
   doc, 
   setDoc, 
@@ -13,17 +12,25 @@ import {
   deleteDoc,
   arrayUnion,
   arrayRemove,
-  serverTimestamp
+  serverTimestamp,
+  DocumentReference,
+  QuerySnapshot,
+  DocumentData,
+  DocumentSnapshot
 } from 'firebase/firestore';
-import { db } from './config';
+import { db, database } from './config';
+import { UserProfile, TripPlan, DatabaseResult } from './types';
 
 // Export db for direct access if needed
 export { db };
 
 // User Profile Operations
-export const createUserProfile = async (uid, userData) => {
+export const createUserProfile = async (
+  uid: string, 
+  userData: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<boolean> => {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef: DocumentReference = doc(db, 'users', uid);
     await setDoc(userDocRef, {
       ...userData,
       favoriteResorts: [],
@@ -38,13 +45,13 @@ export const createUserProfile = async (uid, userData) => {
   }
 };
 
-export const getUserProfile = async (uid) => {
+export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
-    const userDocRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
+    const userDocRef: DocumentReference = doc(db, 'users', uid);
+    const userDoc: DocumentSnapshot = await getDoc(userDocRef);
     
     if (userDoc.exists()) {
-      return { id: userDoc.id, ...userDoc.data() };
+      return { id: userDoc.id, ...userDoc.data() } as UserProfile;
     } else {
       return null;
     }
@@ -54,9 +61,12 @@ export const getUserProfile = async (uid) => {
   }
 };
 
-export const updateUserProfile = async (uid, updates) => {
+export const updateUserProfile = async (
+  uid: string, 
+  updates: Partial<UserProfile>
+): Promise<boolean> => {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef: DocumentReference = doc(db, 'users', uid);
     await updateDoc(userDocRef, {
       ...updates,
       updatedAt: serverTimestamp()
@@ -69,9 +79,9 @@ export const updateUserProfile = async (uid, updates) => {
 };
 
 // Favorites Operations
-export const addToFavorites = async (uid, resortId) => {
+export const addToFavorites = async (uid: string, resortId: string): Promise<boolean> => {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef: DocumentReference = doc(db, 'users', uid);
     await updateDoc(userDocRef, {
       favoriteResorts: arrayUnion(resortId),
       updatedAt: serverTimestamp()
@@ -83,9 +93,9 @@ export const addToFavorites = async (uid, resortId) => {
   }
 };
 
-export const removeFromFavorites = async (uid, resortId) => {
+export const removeFromFavorites = async (uid: string, resortId: string): Promise<boolean> => {
   try {
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef: DocumentReference = doc(db, 'users', uid);
     await updateDoc(userDocRef, {
       favoriteResorts: arrayRemove(resortId),
       updatedAt: serverTimestamp()
@@ -98,7 +108,7 @@ export const removeFromFavorites = async (uid, resortId) => {
 };
 
 // Trip Operations
-export const saveTrip = async (uid, tripData) => {
+export const saveTrip = async (uid: string, tripData: Omit<TripPlan, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   try {
     // Save trip in trips collection
     const tripsCollectionRef = collection(db, 'trips');
@@ -110,7 +120,7 @@ export const saveTrip = async (uid, tripData) => {
     });
 
     // Add trip ID to user's savedTrips array
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef: DocumentReference = doc(db, 'users', uid);
     await updateDoc(userDocRef, {
       savedTrips: arrayUnion(tripDocRef.id),
       updatedAt: serverTimestamp()
@@ -123,15 +133,15 @@ export const saveTrip = async (uid, tripData) => {
   }
 };
 
-export const getUserTrips = async (uid) => {
+export const getUserTrips = async (uid: string): Promise<TripPlan[]> => {
   try {
     const tripsCollectionRef = collection(db, 'trips');
     const q = query(tripsCollectionRef, where('userId', '==', uid));
-    const querySnapshot = await getDocs(q);
+    const querySnapshot: QuerySnapshot<DocumentData> = await getDocs(q);
     
-    const trips = [];
+    const trips: TripPlan[] = [];
     querySnapshot.forEach((doc) => {
-      trips.push({ id: doc.id, ...doc.data() });
+      trips.push({ id: doc.id, ...doc.data() } as TripPlan);
     });
     
     return trips;
@@ -141,14 +151,14 @@ export const getUserTrips = async (uid) => {
   }
 };
 
-export const deleteTrip = async (uid, tripId) => {
+export const deleteTrip = async (uid: string, tripId: string): Promise<boolean> => {
   try {
     // Remove trip from trips collection
-    const tripDocRef = doc(db, 'trips', tripId);
+    const tripDocRef: DocumentReference = doc(db, 'trips', tripId);
     await deleteDoc(tripDocRef);
 
     // Remove trip ID from user's savedTrips array
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef: DocumentReference = doc(db, 'users', uid);
     await updateDoc(userDocRef, {
       savedTrips: arrayRemove(tripId),
       updatedAt: serverTimestamp()
@@ -160,5 +170,6 @@ export const deleteTrip = async (uid, tripId) => {
     throw error;
   }
 };
-// Add this line at the end of your database.js file
-export { database } from './config';
+
+// Keep the export for backward compatibility
+export { database };

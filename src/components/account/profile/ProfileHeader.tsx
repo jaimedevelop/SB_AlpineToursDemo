@@ -1,75 +1,78 @@
-import React, { useState } from 'react';
-import { User, Edit } from 'lucide-react';
-import { useUser } from '../../../context/UserContext';
-import ActionButton from '../shared/ActionButton';
-import styles from '../../../styles/shared.module.css';
+// components/account/AccountHeader.tsx - Cozy Lodge Theme
+import React from 'react';
+import { Home, Settings, User } from 'lucide-react';
+import { useAuth } from '../../../contexts/AuthContext';
+import styles from '../../../styles/account/index.module.css';
 
-const ProfileHeader: React.FC = () => {
-  const { user } = useUser();
-  const [isEditing, setIsEditing] = useState(false);
-
-  if (!user) return null;
+const AccountHeader: React.FC = () => {
+  const { currentUser, userProfile } = useAuth();
 
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHeader}>
-        <h3 className={styles.cardTitle}>Profile Information</h3>
-        <ActionButton
-          variant="secondary"
-          onClick={() => setIsEditing(!isEditing)}
-          icon={<Edit className="w-4 h-4" />}
-        >
-          {isEditing ? 'Cancel' : 'Edit'}
-        </ActionButton>
-      </div>
-      
-      <div className="flex items-center mb-6">
-        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-          <User className="w-10 h-10 text-blue-600" />
+    <header className={styles.accountHeader}>
+      <div className={styles.headerContent}>
+        {/* Logo/Brand Section */}
+        <div className={styles.brandSection}>
+          <div className={styles.logoContainer}>
+            <Home className={styles.logoIcon} />
+          </div>
+          <div className={styles.brandText}>
+            <h1 className={styles.brandTitle}>Your Lodge</h1>
+            <p className={styles.brandSubtitle}>Personal Mountain Retreat</p>
+          </div>
         </div>
-        <div className="flex-1">
-          {isEditing ? (
-            <div className="space-y-2">
-              <input 
-                type="text" 
-                defaultValue={user.name} 
-                className="w-full p-2 border border-gray-300 rounded-lg"
-                placeholder="Full Name"
-              />
-              <input 
-                type="email" 
-                defaultValue={user.email} 
-                className="w-full p-2 border border-gray-300 rounded-lg"
-                placeholder="Email Address"
-              />
+
+        {/* Welcome Section */}
+        <div className={styles.welcomeSection}>
+          <div className={styles.userAvatar}>
+            <User className={styles.avatarIcon} />
+          </div>
+          <div className={styles.welcomeText}>
+            <h2 className={styles.welcomeTitle}>
+              Welcome back, {userProfile?.name || currentUser?.displayName || 'Adventurer'}
+            </h2>
+            <p className={styles.welcomeSubtitle}>
+              Ready for your next mountain adventure?
+            </p>
+          </div>
+        </div>
+
+        {/* Stats Section */}
+        <div className={styles.statsSection}>
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>
+              {userProfile?.savedTrips?.length || 0}
             </div>
-          ) : (
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">{user.name}</h2>
-              <p className="text-gray-600">{user.email}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Member since {new Date(user.joinDate).toLocaleDateString()}
-              </p>
+            <div className={styles.statLabel}>Trips Planned</div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>
+              {userProfile?.favoriteResorts?.length || 0}
             </div>
-          )}
+            <div className={styles.statLabel}>Favorite Resorts</div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>
+              {userProfile?.experienceLevel || 'Beginner'}
+            </div>
+            <div className={styles.statLabel}>Skill Level</div>
+          </div>
+        </div>
+
+        {/* Settings Quick Access */}
+        <div className={styles.quickActions}>
+          <button className={styles.actionButton} title="Quick Settings">
+            <Settings className={styles.actionIcon} />
+          </button>
         </div>
       </div>
 
-      {isEditing && (
-        <div className="flex space-x-3 mt-4">
-          <ActionButton variant="primary">
-            Save Changes
-          </ActionButton>
-          <ActionButton 
-            variant="secondary"
-            onClick={() => setIsEditing(false)}
-          >
-            Cancel
-          </ActionButton>
-        </div>
-      )}
-    </div>
+      {/* Decorative Elements */}
+      <div className={styles.headerDecoration}>
+        <div className={styles.fireplace}></div>
+        <div className={styles.woodBeam}></div>
+      </div>
+    </header>
   );
 };
 
-export default ProfileHeader;
+export default AccountHeader;

@@ -1,0 +1,23 @@
+/* src/styles/account/index.module.css - Consolidated account styles */
+
+/* Import all account style modules */
+@import './base.module.css';
+@import './header.module.css';
+@import './navigation.module.css';
+@import './cards.module.css';
+@import './buttons.module.css';
+
+/* 
+Usage: Import this single file in any account component:
+import styles from '../../../styles/account/index.module.css';
+
+Available style classes:
+- Layout: .accountContainer, .accountContent, .mainContent, .sectionContainer
+- Header: .accountHeader, .headerContent, .brandSection, .welcomeSection, .statsSection
+- Navigation: .sidebar, .navButton, .navButtonActive, .navButtonInactive, .navItems
+- Cards: .card, .cardHeader, .cardTitle, .levelCard, .achievementCard, .rarityBadge
+- Forms: .formGroup, .label, .input, .select, .displayField, .experienceBadge
+- Buttons: .button, .buttonPrimary, .buttonSecondary, .buttonDisabled
+- Contacts: .contactItem, .contactForm, .emptyState
+- Responsive: All styles include mobile breakpoints
+*/

@@ -1,10 +1,10 @@
 import React from 'react';
-import { useSettings } from '../../../context/SettingsContext';
+import { useSettings } from '../../../contexts/SettingsContext';
 import ToggleSwitch from '../shared/ToggleSwitch';
 import styles from '../../../styles/shared.module.css';
 
 interface NotificationOption {
-  key: keyof typeof import('../../../context/SettingsContext').SettingsProvider.prototype.settings.notifications;
+  key: keyof typeof import('../../../contexts/SettingsContext').SettingsProvider.prototype.settings.notifications;
   name: string;
   description: string;
 }

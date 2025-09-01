@@ -1,7 +1,7 @@
 import React from 'react';
 import { Award, Star, Crown, Medal } from 'lucide-react';
 import ProgressBar from '../shared/ProgressBar';
-import styles from '../../../styles/account.module.css';
+import styles from '../../../styles/account/index.module.css';
 
 interface Achievement {
   id: string;

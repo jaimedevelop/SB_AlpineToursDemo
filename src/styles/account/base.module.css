@@ -1,0 +1,132 @@
+/* src/styles/account/base.module.css - Main layout and container styles */
+
+:root {
+  /* Account Theme Colors */
+  --account-primary: linear-gradient(135deg, #92400e 0%, #d97706 30%, #f59e0b 70%, #fbbf24 100%);
+  --account-primary-solid: #d97706;
+  --account-secondary: #f59e0b;
+  --account-accent: #dc2626;
+  --account-text-primary: #451a03;
+  --account-text-secondary: #78350f;
+  --account-bg-warm: #fef3c7;
+  --account-bg-light: #fffbeb;
+  --account-border: #f3a847;
+  
+  /* Wood grain texture */
+  --wood-texture: repeating-linear-gradient(
+    45deg, 
+    rgba(220,38,38,0.1), 
+    rgba(220,38,38,0.1) 20px, 
+    transparent 20px, 
+    transparent 40px
+  );
+  
+  /* Fire glow effect */
+  --fire-glow: radial-gradient(
+    circle at center, 
+    rgba(255,255,255,0.1) 0%, 
+    transparent 70%
+  );
+}
+
+/* Main Account Container */
+.accountContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--account-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.accountContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--wood-texture), var(--fire-glow);
+  animation: fireGlow 4s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.accountContent {
+  flex: 1 1 0%;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* Main Content Area */
+.mainContent {
+  flex: 1 1 0%;
+  background-color: #f9fafb;
+  overflow-y: auto;
+  max-width: calc(100% - 304px);
+  min-width: 0;
+  padding: 0; /* Remove padding since sectionContainer handles it */
+}
+
+/* Section Container */
+.sectionContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 20px;
+  background: rgba(255, 251, 235, 0.95);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  border: 2px solid var(--account-accent);
+  box-shadow: 
+    0 10px 25px rgba(146, 64, 14, 0.2),
+    0 4px 10px rgba(220, 38, 38, 0.1);
+}
+
+/* Animations */
+@keyframes fireGlow {
+  0% { opacity: 0.6; }
+  100% { opacity: 0.9; }
+}
+
+/* Loading States */
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.loadingSkeleton {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .accountContent {
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .mainContent {
+    max-width: 100%;
+  }
+  
+  .sectionContainer {
+    padding: 16px;
+  }
+}

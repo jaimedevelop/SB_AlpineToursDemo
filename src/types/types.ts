@@ -1,4 +1,4 @@
-// src/types/Resort.ts
+// src/types/types.ts
 import { WeatherData } from './Weather';
 
 export interface Resort {

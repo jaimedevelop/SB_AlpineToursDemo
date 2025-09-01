@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { UserProvider } from '../context/UserContext';
-import { SettingsProvider } from '../context/SettingsContext';
+import { UserProvider } from '../contexts/UserContext';
+import { SettingsProvider } from '../contexts/SettingsContext';
 import AccountHeader from '../components/account/AccountHeader';
 import AccountNavigation from '../components/account/AccountNavigation';
 import AchievementsSection from '../components/account/achievements/AchievementsSection';
@@ -10,7 +10,7 @@ import BillingSection from '../components/account/billing/BillingSection';
 import PrivacySection from '../components/account/privacy/PrivacySection';
 import TechnicalSection from '../components/account/technical/TechnicalSection';
 import SupportSection from '../components/account/support/SupportSection';
-import styles from '../styles/account.module.css';
+import styles from '../styles/account/index.module.css';
 
 const Account: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string>('achievements');

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Globe, Settings, Sun, Moon } from 'lucide-react';
-import { useSettings } from '../../../context/SettingsContext';
+import { useSettings } from '../../../contexts/SettingsContext';
 import ToggleSwitch from '../shared/ToggleSwitch';
 import styles from '../../../styles/shared.module.css';
 

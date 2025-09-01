@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut } from 'lucide-react';
-import styles from '../../styles/account.module.css';
+import styles from '../../styles/account/index.module.css';
 
 const AccountHeader: React.FC = () => {
   const handleSignOut = () => {

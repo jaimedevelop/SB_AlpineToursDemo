@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUserStats } from '../../../hooks/useAccountData';
-import styles from '../../../styles/account.module.css';
+import styles from '../../../styles/account/index.module.css';
 
 const LevelProgress: React.FC = () => {
   const { data: userStats, isLoading } = useUserStats();
